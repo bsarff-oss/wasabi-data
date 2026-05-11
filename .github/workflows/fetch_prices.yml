@@ -1,0 +1,43 @@
+name: Daily Price Refresh
+ 
+# Runs at 23:00 UTC weekdays = 6:00 PM ET (during EST, 7:00 PM ET during EDT).
+# Tiingo posts US EOD data by ~17:30 ET, so 6 PM ET is a safe window.
+# Manual trigger via "Run workflow" button is also enabled for ad-hoc refreshes.
+on:
+  schedule:
+    - cron: "0 23 * * 1-5"
+  workflow_dispatch:
+ 
+permissions:
+  contents: write  # required to commit the updated CSV back to the repo
+ 
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+ 
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+ 
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+ 
+      - name: Install dependencies
+        run: pip install requests
+ 
+      - name: Fetch prices from Tiingo
+        env:
+          TIINGO_API_KEY: ${{ secrets.TIINGO_API_KEY }}
+        run: python fetch_prices.py
+ 
+      - name: Commit and push updated CSV
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/master_prices.csv data/last_run.log
+          # Only commit if something actually changed
+          git diff --cached --quiet || git commit -m "Daily price update $(date -u +'%Y-%m-%d')"
+          git push
