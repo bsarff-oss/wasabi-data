@@ -15,6 +15,7 @@ ALLY
 TPL
 AMAT
 AMD
+hgraf
 AMGN
 AMZN
 AON
