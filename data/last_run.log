@@ -1,9 +1,9 @@
-Run finished 2026-07-25T00:09:33.316272Z
-Elapsed: 38.4s
+Run finished 2026-07-28T00:07:30.892774Z
+Elapsed: 117.8s
 Tickers requested: 218
 Succeeded: 218
 Not found: 0 
 Failed: 0 
-Total bars: 164078
-Latest date in data: 2026-07-24
-CSV size: 11514.2 KB
+Total bars: 164082
+Latest date in data: 2026-07-27
+CSV size: 11508.3 KB
