@@ -2,6 +2,7 @@
 """
 fetch_prices.py — pulls daily OHLCV from Tiingo for the ticker list in tickers.txt
 and writes data/master_prices.csv in the schema the Wasabi Screener expects.
+Also maintains data/ticker_names.csv (ticker,name) for the screener's detail drawer.
 
 Run locally:
     export TIINGO_API_KEY="your_key_here"
@@ -15,6 +16,11 @@ Output schema (per the Wasabi Screener):
 Pulls last ~3 years of history per ticker. That covers all moving averages
 (50/150/250) plus a buffer for P&F. Larger history would slow the workflow
 without changing the screener's output.
+
+Names are static metadata, so ticker_names.csv is cache-first: only tickers
+missing from the existing file hit Tiingo's metadata endpoint. First run costs
+one call per ticker; normal nights cost zero; a ticker added to tickers.txt
+resolves automatically the next night.
 """
 
 import csv
@@ -35,6 +41,7 @@ TIMEOUT = 30  # per-request timeout in seconds
 ROOT = Path(__file__).resolve().parent
 TICKER_FILE = ROOT / "tickers.txt"
 OUTPUT_FILE = ROOT / "data" / "master_prices.csv"
+NAMES_FILE = ROOT / "data" / "ticker_names.csv"
 LOG_FILE = ROOT / "data" / "last_run.log"
 
 
@@ -83,6 +90,60 @@ def fetch_one(ticker, token, start_date):
                 return []
             time.sleep(2 ** attempt)
     return []
+
+
+def load_existing_names():
+    """Read data/ticker_names.csv if present. Returns {ticker: name}."""
+    names = {}
+    if NAMES_FILE.exists():
+        with open(NAMES_FILE, newline="", encoding="utf-8") as f:
+            for row in csv.reader(f):
+                if len(row) >= 2 and row[0] != "ticker" and row[1]:
+                    names[row[0]] = row[1]
+    return names
+
+
+def fetch_name(clean_ticker, token):
+    """Fetch metadata name for one ticker from Tiingo. Returns name or None."""
+    url = f"{API_BASE}/{clean_ticker}"
+    headers = {"Content-Type": "application/json", "Authorization": f"Token {token}"}
+    try:
+        r = requests.get(url, headers=headers, timeout=TIMEOUT)
+        if r.status_code == 200:
+            name = (r.json() or {}).get("name")
+            return name.strip() if name else None
+    except requests.exceptions.RequestException:
+        pass  # transient — retries automatically next night
+    return None
+
+
+def update_names(tickers, token):
+    """
+    Maintain data/ticker_names.csv. Cache-first: only fetches tickers not
+    already in the file. Keys on the original ticker symbol (matching the
+    Ticker column in master_prices.csv, which the screener uses).
+    Returns (resolved_count, missing_after) for the run log.
+    """
+    names = load_existing_names()
+    missing = [t for t in tickers if t not in names]
+    resolved = 0
+    for ticker in missing:
+        clean = ticker.replace("/", "-").replace(".", "-")
+        name = fetch_name(clean, token)
+        if name:
+            names[ticker] = name
+            resolved += 1
+        time.sleep(RATE_LIMIT_DELAY)
+
+    NAMES_FILE.parent.mkdir(parents=True, exist_ok=True)
+    with open(NAMES_FILE, "w", newline="", encoding="utf-8") as f:
+        w = csv.writer(f)  # csv module quotes names containing commas
+        w.writerow(["ticker", "name"])
+        for t in sorted(names):
+            w.writerow([t, names[t]])
+
+    still_missing = [t for t in tickers if t not in names]
+    return resolved, still_missing
 
 
 def main():
@@ -143,6 +204,10 @@ def main():
         w.writerow(["Date", "Ticker", "Open", "High", "Low", "Close", "Volume"])
         w.writerows(rows)
 
+    # Refresh ticker names — only for tickers whose prices succeeded, so
+    # typos and delisted symbols never enter the names file
+    names_resolved, names_missing = update_names(succeeded, token)
+
     # Write a run log
     elapsed = time.time() - started
     latest_date = max((r[0] for r in rows), default="—")
@@ -156,6 +221,8 @@ def main():
         f"Total bars: {len(rows)}",
         f"Latest date in data: {latest_date}",
         f"CSV size: {OUTPUT_FILE.stat().st_size / 1024:.1f} KB",
+        f"Names resolved this run: {names_resolved}",
+        f"Names still missing: {len(names_missing)} {names_missing if names_missing else ''}",
     ]
     log_text = "\n".join(log_lines)
     LOG_FILE.write_text(log_text + "\n")
