@@ -1,9 +1,9 @@
-Run finished 2026-07-31T00:09:45.552518Z
-Elapsed: 121.6s
-Tickers requested: 218
-Succeeded: 218
-Not found: 0 
+Run finished 2026-07-31T13:20:11.727407Z
+Elapsed: 211.5s
+Tickers requested: 389
+Succeeded: 388
+Not found: 1 ['ATGE']
 Failed: 0 
-Total bars: 164094
+Total bars: 288204
 Latest date in data: 2026-07-30
-CSV size: 11500.2 KB
+CSV size: 19182.5 KB
