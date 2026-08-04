@@ -1,11 +1,11 @@
-Run finished 2026-08-01T00:10:05.216886Z
-Elapsed: 333.2s
+Run finished 2026-08-04T00:16:35.110565Z
+Elapsed: 258.2s
 Tickers requested: 389
-Succeeded: 387
+Succeeded: 388
 Not found: 1 ['ATGE']
-Failed: 1 ['AAPL']
-Total bars: 287578
-Latest date in data: 2026-07-31
-CSV size: 19149.6 KB
-Names resolved this run: 387
+Failed: 0 
+Total bars: 288346
+Latest date in data: 2026-08-03
+CSV size: 19217.4 KB
+Names resolved this run: 388
 Names still missing: 0 
