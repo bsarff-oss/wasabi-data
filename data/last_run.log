@@ -1,11 +1,11 @@
-Run finished 2026-11-10T04:34:12.793709Z
-Elapsed: 118.0s
+Run finished 2026-11-11T02:40:28.443282Z
+Elapsed: 125.8s
 Tickers requested: 389
 Succeeded: 388
 Not found: 1 ['ATGE']
 Failed: 0 
-Total bars: 289125
-Latest date in data: 2026-11-09
-CSV size: 19225.4 KB
+Total bars: 289132
+Latest date in data: 2026-11-10
+CSV size: 19232.4 KB
 Names resolved this run: 388
 Names still missing: 0 
